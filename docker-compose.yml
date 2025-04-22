@@ -1,0 +1,80 @@
+services:
+  app-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: skyhawk-app:latest
+    platform: linux/amd64
+
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    ports:
+      - "8000:8000"
+    command: -jar DynamoDBLocal.jar -sharedDb
+
+  migrations:
+    image: skyhawk-app:latest
+    depends_on:
+      - dynamodb-local
+    command: >
+      /bin/sh -c "
+      sleep 15 &&
+      ./app migrations --endpoint http://dynamodb-local:8000"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: player_stats
+    ports:
+      - "5444:5432"
+    restart: unless-stopped
+
+  goose:
+    build:
+      context: ./migrations
+    depends_on:
+      - postgres
+    entrypoint: >
+      /bin/sh -c "
+      sleep 15 &&
+      goose -dir . postgres 'postgres://user:pass@postgres:5432/player_stats?sslmode=disable' up"
+
+  app:
+    image: skyhawk-app:latest
+    ports:
+      - "${PORT}:8081"
+    depends_on:
+      - migrations
+      - goose
+      - app-builder
+      - dynamodb-local
+      - postgres
+      - mock-data
+    command: >
+      /bin/sh -c "
+      sleep 15 &&
+      ./app serv
+      --port 8081
+      --dsn '${DSN}'
+      --region '${REGION}'
+      --endpoint '${ENDPOINT}'
+      --cacheTableName '${CACHETABLENAME}'"
+    environment:
+      PORT: 8081
+      DSN: ${DSN}
+      REGION: ${REGION}
+      ENDPOINT: ${ENDPOINT}
+      CACHETABLENAME: ${CACHETABLENAME}
+
+  mock-data:
+    build:
+      context: ./examples/migrations
+    depends_on:
+      - postgres
+      - goose
+    entrypoint: >
+      /bin/sh -c "
+      sleep 20 &&
+      goose -dir . postgres 'postgres://user:pass@postgres:5432/player_stats?sslmode=disable' up"
