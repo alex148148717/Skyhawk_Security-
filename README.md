@@ -31,14 +31,7 @@ It uses PostgreSQL for persistent storage and optionally supports AWS DynamoDB (
 All configuration options are passed via command-line flags:
 
 ```bash
-./app \
-  --port=8081 \
-  --dsn="host=localhost user=user password=pass dbname=player_stats port=5444 sslmode=disable TimeZone=UTC" \
-  --region="us-west-2" \
-  --endpoint="http://localhost:8000" \
-  --cacheTableName="cache" \
-  --dax \
-  --daxhp=""
+./app 
 ```
 
 ## Example URLs

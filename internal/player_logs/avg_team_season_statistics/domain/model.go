@@ -1,14 +1,10 @@
-package team_player_season_statistics
+package domain
 
-type AveragePlayerSeason struct {
+type AverageTeamSeason struct {
 	SeasonID         int
 	TeamID           int
 	TeamName         string
 	NbaTeamID        int
-	PlayerID         int
-	PlayerName       string
-	NbaPlayerID      int
-	JerseyNumber     int
 	AvgPoints        float64
 	AvgRebounds      float64
 	AvgAssists       float64

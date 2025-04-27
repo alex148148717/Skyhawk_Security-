@@ -1,6 +1,8 @@
 package main
 
-import "skyhawk/cmd"
+import (
+	"skyhawk/cmd"
+)
 
 func main() {
 	cmd.Execute()
