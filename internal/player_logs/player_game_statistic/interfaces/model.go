@@ -1,30 +1,14 @@
-package player_game_statistic
+package interfaces
 
 import (
 	"fmt"
+	"skyhawk/internal/player_logs/player_game_statistic/domain"
 )
 
 var (
 	FoulsError         = fmt.Errorf("invalid fouls (must be between 0–6)")
 	MinutesPlayedError = fmt.Errorf("invalid minutes played (must be between 0–48.0)")
 )
-
-type PlayerGameStatistic struct {
-	ID            int32
-	JobID         string
-	SeasonID      int32
-	GameID        int32
-	TeamID        int32
-	PlayerID      int32
-	Points        int16
-	Rebounds      int16
-	Assists       int16
-	Steals        int16
-	Blocks        int16
-	Fouls         uint8
-	Turnovers     int16
-	MinutesPlayed float32
-}
 
 type PlayerLogStatisticRaw struct {
 	Id            int32   `json:"id"`
@@ -42,7 +26,7 @@ type PlayerLogStatisticRaw struct {
 	MinutesPlayed float32 `json:"minutes_played"`
 }
 
-func (p PlayerLogStatisticRaw) Convert() (*PlayerGameStatistic, error) {
+func (p PlayerLogStatisticRaw) Convert() (*domain.PlayerGameStatistic, error) {
 
 	if p.Fouls < 0 || p.Fouls > 6 {
 		return nil, FoulsError
@@ -51,7 +35,7 @@ func (p PlayerLogStatisticRaw) Convert() (*PlayerGameStatistic, error) {
 		return nil, MinutesPlayedError
 	}
 
-	playerGameStatistic := PlayerGameStatistic{
+	playerGameStatistic := domain.PlayerGameStatistic{
 		ID:            p.Id,
 		SeasonID:      p.SeasonYear,
 		GameID:        p.GameId,

@@ -1,20 +1,21 @@
-package player_game_statistic
+package infrastructure
 
 import (
 	"context"
 	"database/sql"
+	"skyhawk/internal/player_logs/player_game_statistic/domain"
 )
 
-type DBClient struct {
+type PlayerGameStatisticRepository struct {
 	db *sql.DB
 }
 
-func NewDBClient(db *sql.DB) *DBClient {
-	c := &DBClient{db: db}
-	return c
+func NewPlayerGameStatisticRepository(db *sql.DB) domain.PlayerGameStatisticRepository {
+	c := PlayerGameStatisticRepository{db: db}
+	return &c
 }
 
-func (c *DBClient) InsertPlayerGameStatistic(ctx context.Context, JobID string, playerGameStatistics []PlayerGameStatistic) ([]int32, error) {
+func (c *PlayerGameStatisticRepository) InsertPlayerGameStatistic(ctx context.Context, JobID string, playerGameStatistics []domain.PlayerGameStatistic) ([]int32, error) {
 	tx, err := c.db.Begin()
 	if err != nil {
 		return nil, err

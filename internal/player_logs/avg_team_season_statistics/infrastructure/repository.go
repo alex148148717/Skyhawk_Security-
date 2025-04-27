@@ -1,21 +1,34 @@
-package team_season_statistics
+package infrastructure
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/lib/pq"
+	"skyhawk/internal/player_logs/avg_team_season_statistics/domain"
+	"skyhawk/internal/player_logs/config"
 )
 
-type DBClient struct {
-	db *sql.DB
+type Repository struct {
+	db              *sql.DB
+	dynamoDBAPI     dynamodbiface.DynamoDBAPI
+	dynamoTableName string
 }
 
-func NewDBClient(db *sql.DB) *DBClient {
-	c := &DBClient{db: db}
-	return c
+func NewRepository(db *sql.DB, config *config.Config, dynamoDBAPI dynamodbiface.DynamoDBAPI) domain.TeamGameStatisticRepository {
+	r := Repository{
+		db:              db,
+		dynamoDBAPI:     dynamoDBAPI,
+		dynamoTableName: config.CacheTableName,
+	}
+	return &r
 }
 
-func (c *DBClient) AverageTeamSeason(ctx context.Context, ids []int32) ([]AverageTeamSeason, error) {
+func (c *Repository) GetAverageTeamsSeason(ctx context.Context, ids []int32) ([]domain.AverageTeamSeason, error) {
 
 	query := `
 WITH grouped_stats AS (
@@ -80,9 +93,9 @@ where season_id=2024 and team_avg.team_id=1
 		return nil, err
 	}
 	defer rows.Close()
-	var results []AverageTeamSeason
+	var results []domain.AverageTeamSeason
 	for rows.Next() {
-		var r AverageTeamSeason
+		var r domain.AverageTeamSeason
 		if err := rows.Scan(
 			&r.SeasonID,
 			&r.TeamID,
@@ -102,4 +115,50 @@ where season_id=2024 and team_avg.team_id=1
 		results = append(results, r)
 	}
 	return results, nil
+}
+func (c *Repository) GetCacheAverageTeamSeason(ctx context.Context, seasonID, teamID int) (*domain.AverageTeamSeason, error) {
+
+	key := KeyGenerate(seasonID, teamID)
+	input := &dynamodb.GetItemInput{
+		TableName: aws.String(c.dynamoTableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"id": {
+				S: aws.String(key),
+			},
+		},
+	}
+
+	result, err := c.dynamoDBAPI.GetItem(input)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Item == nil {
+		return nil, fmt.Errorf("key not found")
+	}
+	var out domain.AverageTeamSeason
+	err = dynamodbattribute.UnmarshalMap(result.Item, &out)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal struct: %w", err)
+	}
+	return &out, nil
+}
+func (c *Repository) SetCacheAverageTeamSeason(ctx context.Context, seasonID, teamID int, averageTeamSeason domain.AverageTeamSeason) error {
+	item, err := dynamodbattribute.MarshalMap(averageTeamSeason)
+	if err != nil {
+		return fmt.Errorf("failed to marshal struct: %w", err)
+	}
+	key := KeyGenerate(seasonID, teamID)
+
+	item["id"] = &dynamodb.AttributeValue{
+		S: aws.String(key),
+	}
+
+	input := &dynamodb.PutItemInput{
+		TableName: aws.String(c.dynamoTableName),
+		Item:      item,
+	}
+
+	_, err = c.dynamoDBAPI.PutItem(input)
+	return err
 }

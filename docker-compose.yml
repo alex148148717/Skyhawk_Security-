@@ -55,18 +55,14 @@ services:
     command: >
       /bin/sh -c "
       sleep 15 &&
-      ./app serv
-      --port 8081
-      --dsn '${DSN}'
-      --region '${REGION}'
-      --endpoint '${ENDPOINT}'
-      --cacheTableName '${CACHETABLENAME}'"
+      ./app serv  "
     environment:
-      PORT: 8081
+      PORT: ${PORT}
       DSN: ${DSN}
-      REGION: ${REGION}
-      ENDPOINT: ${ENDPOINT}
-      CACHETABLENAME: ${CACHETABLENAME}
+      DYNAMODB_REGION: ${DYNAMODB_REGION}
+      DYNAMODB_ENDPOINT: ${DYNAMODB_ENDPOINT}
+      DYNAMODB_CACHE_TABLE_NAME: ${DYNAMODB_CACHE_TABLE_NAME}
+      DYNAMODB_USE_DAX: ${DYNAMODB_USE_DAX}
 
   mock-data:
     build:
